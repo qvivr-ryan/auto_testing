@@ -59,10 +59,16 @@ def create_bond(device_address=None, adapter_address=None):
                 print ("Found device. connecting to %s" % (device_address.upper()))
                 con.sendline("connect " + device_address.upper())
                 con.expect("Connection successful", timeout=10)
-                sleep(10) #need extra time here to finish pairing
+                #sleep(10) #need extra time here to finish pairing
             except(pexpect.TIMEOUT):
                 print("could not connect to %s" % (device_address.upper()))
                 return(1)
+            try:
+                #explicitly pair with the device
+                con.sendline("pair " + device_address.upper())
+                con.expect("Pairing successful", timeout=5)
+            except(pexpect.TIMEOUT):
+                print("pairing not successful")
             try:
                 con.sendline("info " + device_address.upper())   
                 con.expect("Paired: yes", timeout=1)
@@ -72,6 +78,16 @@ def create_bond(device_address=None, adapter_address=None):
             else:
                 con.sendline("trust " + device_address.upper())
             print("Connection and pairing successful!")
+            #try:
+                #con.sendline("list-attributes")
+                #con.expect("6e400003-b5a3-f393-e0a9-e50e24dcca9e", timeout=2)
+                #print(con.before)
+                #for line in con.before:
+                #    read_characteristics = line
+                #print(read_characteristics)
+            #except(pexpect.TIMEOUT):
+                #print("could not list the attributes")
+                #return(1)
             try:
                 print("disconnecting temporarily ...")
                 con.sendline("disconnect " + device_address.upper())
