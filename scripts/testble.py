@@ -116,6 +116,17 @@ try:
         print("set_card_order cmd successful\r\n")
     else:
         print("set_card_order cmd failed\r\n")
+
+    raw_input("\npress enter to send cmd: 'get_log_data' \n")
+    ble_cmd_transmit(device, 'get_log_data', bytearray([]))
+    #print("time before sleep %s\r\n" % time.ctime())
+    time.sleep(2)
+    #print("time after sleep %s\r\n" % time.ctime())
+    if True == ble_cmd_response_status_check(device):
+        print("get_log_data cmd successful\r\n")
+    else:
+        print("get_log_data cmd failed\r\n")
+        
     raw_input("\npress enter to exit\n")
     
 except NotConnectedError as message:
