@@ -266,7 +266,7 @@ def ble_packet_receive(handle=None, value=None):
             parse_index += 4
             payload_length = bytesToShortBigEndian(value, parse_index)
             parse_index += 2
-            print("packet_seq_no = %d, payload_hash = 0x%x, payload_length = 0x%x\r\n" % (packet_seq_no, payload_hash, payload_length))
+            #print("packet_seq_no = %d, payload_hash = 0x%x, payload_length = 0x%x\r\n" % (packet_seq_no, payload_hash, payload_length))
             local_expected_payload_len = payload_length
             
         if payload_length > MAX_PAYLOAD_LENGTH:

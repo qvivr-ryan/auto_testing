@@ -55,6 +55,7 @@ try:
    
     #ready to send/receive data
     print("ready to send / receive data...\n")
+
     raw_input("\npress enter to send cmd: 'get_fw_version' \n")
     ble_cmd_transmit(device, 'get_fw_version', bytearray([]))
     #print("time before sleep %s\r\n" % time.ctime())
@@ -64,6 +65,18 @@ try:
         print("get_fw_version cmd successful\r\n")
     else:
         print("get_fw_version cmd failed\r\n")
+
+    raw_input("\npress enter to send cmd: 'set_logging' \n")
+    ble_cmd_transmit(device, 'set_logging', bytearray.fromhex("019f 0001 01"))
+    #print("time before sleep %s\r\n" % time.ctime())
+    time.sleep(2)
+    #print("time after sleep %s\r\n" % time.ctime())
+    if True == ble_cmd_response_status_check(device):
+        print("set_logging cmd successful\r\n")
+    else:
+        print("set_logging cmd failed\r\n")
+
+
     raw_input("\npress enter to send cmd: 'delete_all_cards' \n")
     ble_cmd_transmit(device, 'delete_all_cards', bytearray([]))
     time.sleep(5)

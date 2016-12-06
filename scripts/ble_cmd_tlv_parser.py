@@ -5,7 +5,7 @@ import binascii
 import pygatt
 import time
 from binascii import hexlify
-from byte_data_converter import shortToBytes, longToBytes, bytesToShortBigEndian, bytesToLongBigEndian
+from byte_data_converter import shortToBytes, longToBytes, bytesToShortBigEndian, bytesToLongBigEndian, bytesToLongLittleEndian
 
 #Global TLV IDs
 tlv_id_table = []
@@ -41,6 +41,15 @@ tlv_id_table.append(['CARD_ORDER_TLV_ID', 411])
 tlv_id_table.append(['CARD_NONCE_TLV_ID', 412])
 tlv_id_table.append(['ATMEL_FW_PKT_TLV_ID', 413])
 tlv_id_table.append(['ATMEL_FW_SIZE_TLV_ID', 414])
+tlv_id_table.append(['BYTE_VALUE_TLV_ID', 415])
+tlv_id_table.append(['CARD_PIN_TLV_ID', 416])
+tlv_id_table.append(['APP_SESSION_INFO_TLV_ID', 417])
+tlv_id_table.append(['DATA_PKT_TLV_ID', 418])
+tlv_id_table.append(['DATA_INFO_TLV_ID', 419])
+tlv_id_table.append(['IMAGE_PARAMS_TLV_ID', 420])
+
+tlv_id_table.append(['MFG_STAGE_TLV_ID', 501])
+
 
 def is_tlv_valid(tlv_id = None):
     for x in tlv_id_table:
@@ -50,11 +59,16 @@ def is_tlv_valid(tlv_id = None):
     print("is_tlv_valid(): tlv_id = 0x%x is invalid\r\n" % tlv_id)
     return False
 
+def get_tlv_type(tlv_id = None):
+    for x in tlv_id_table:
+        if x[1] == tlv_id:
+            return x[0]
+    return 'None'
 
 def print_tlv_type(tlv_id = None):
     for x in tlv_id_table:
         if x[1] == tlv_id:
-            print("TLV Type : %s\r\n" % x[0])
+            print("TLV Type  : %s\r\n" % x[0])
             return
     print("TLV Type: Invalid (%d)\r\n" % tlv_id)
     
@@ -84,8 +98,68 @@ def ble_cmd_tlv_parser (value = None):
             
         #parse for tlv data
         tlv_data = value[parse_index : parse_index + length]
-        print("TLV Data : 0x%s\r\n" % hexlify(tlv_data))
+        print("TLV Data  : 0x%s\r\n" % hexlify(tlv_data))
+        tlv_intepretor(type, length, tlv_data)
         parse_index += length
         remaining_len -= length
                 
     return
+
+def tlv_intepretor (tlv_id = None, tlv_len = None, value = None):
+    if(get_tlv_type(tlv_id) == 'FW_VERSION_TLV_ID'):
+        print("Firmware version is: %d.%d.%d.%d\r\n" % (value[3], value[2], value[1], value[0]))
+    elif(get_tlv_type(tlv_id) == 'FW_CID_TLV_ID'):
+        print("Firmware card id is: %d\r\n" % (value[0]))
+    elif(get_tlv_type(tlv_id) == 'LOG_DATA_TLV_ID'):
+        log_data_interpretor(tlv_len, value)
+    else:
+        print("tlv_interpretor(): Uninterpretated TLV\r\n")
+
+
+#Global Log Data IDs
+log_data_table = []
+
+log_data_table.append(['log_event_none', 0])
+log_data_table.append(['log_event_trigger_left',1])
+log_data_table.append(['log_event_trigger_right',2])
+log_data_table.append(['log_event_button_left',3])
+log_data_table.append(['log_event_button_right',4])
+log_data_table.append(['log_event_button_middle',5])
+log_data_table.append(['log_event_sys_powerup',6])
+log_data_table.append(['log_event_ble_connect',7])
+log_data_table.append(['log_event_ble_disconnect',8])
+log_data_table.append(['log_event_ble_secured',9])
+log_data_table.append(['log_event_pin_secured',10])
+log_data_table.append(['log_event_sys_shutoff',11])
+log_data_table.append(['log_event_card_swiped',12])
+log_data_table.append(['log_event_log_index',13])
+log_data_table.append(['log_event_new_bond_success', 14])
+log_data_table.append(['log_event_new_bond_fail', 15])
+log_data_table.append(['log_event_sw_watchdog_warn', 16])
+log_data_table.append(['log_event_app_session_id',17])
+log_data_table.append(['log_event_battery_reading',18])
+log_data_table.append(['log_event_max',19])
+
+def get_log_event_from_id(id = None):
+    for x in log_data_table:
+        if x[1] == id:
+            return x[0]
+    return 'undefined'
+
+def log_data_interpretor(tlv_len = None, value = None):
+    print("log_data_interpretor(): \r\n")
+    i = 0
+    while i  < tlv_len :
+        print("------------------------\r\n")
+        print("log event : %s\n" % get_log_event_from_id(value[i]))
+        i += 1
+        print("session id: %d\n" % value[i])
+        i += 1
+        print("data_1    : %d\n" % value[i])
+        i += 1
+        print("data_2    : %d\n" % value[i])
+        i += 1
+        print("data      : %d\n" % bytesToLongLittleEndian(value, i))
+        i += 4
+        #print("i = %d\n" % i)
+        

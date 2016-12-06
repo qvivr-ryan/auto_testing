@@ -29,3 +29,8 @@ def bytesToLongBigEndian(b, index):
     n = (b[index] << 24) | (b[index + 1] << 16) | (b[index + 2] << 8) | (b[index + 3])    
     return n
 
+def bytesToLongLittleEndian(b, index):
+    n = 0;
+    n = (b[index] << 0) | (b[index + 1] << 8) | (b[index + 2] << 16) | (b[index + 3] << 24)    
+    return n
+
