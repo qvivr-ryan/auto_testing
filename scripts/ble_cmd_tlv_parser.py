@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
 import binascii
 import pygatt
 import time
@@ -152,14 +153,61 @@ def log_data_interpretor(tlv_len = None, value = None):
     while i  < tlv_len :
         print("------------------------\r\n")
         print("log event : %s\n" % get_log_event_from_id(value[i]))
+        log_event_id = value[i]
         i += 1
         print("session id: %d\n" % value[i])
         i += 1
-        print("data_1    : %d\n" % value[i])
+        sys.stdout.write("data_1    : %d" % value[i])
+        log_data_1_interpretor(log_event_id)
         i += 1
-        print("data_2    : %d\n" % value[i])
+        sys.stdout.write("data_2    : %d" % value[i])
+        log_data_2_interpretor(log_event_id)
         i += 1
-        print("data      : %d\n" % bytesToLongLittleEndian(value, i))
+        sys.stdout.write("data      : %d" % bytesToLongLittleEndian(value, i))
+        log_data_3_interpretor(log_event_id)
         i += 4
         #print("i = %d\n" % i)
         
+
+def log_data_1_interpretor(id = None):
+    log_event = get_log_event_from_id(id)
+    if log_event == 'log_event_trigger_left' or log_event == 'log_event_trigger_right' :
+        print(" (bitwidth)\n")
+    elif log_event == 'log_event_button_left' or log_event == 'log_event_button_right' or log_event == 'log_event_button_middle' :
+        print(" (card FW state\n")
+    elif log_event == 'log_event_sys_powerup' :
+        print(" (battery reading (MSB))\n")
+    elif log_event == 'log_event_battery_reading' :
+        print(" (battery reading (MSB))\n")
+    elif log_event == 'log_event_app_session_id' :
+        print(" (app session id (MSB))\n")
+    elif log_event == 'log_event_card_swiped' :
+        print(" (ignore)\n")
+    else :
+        print(" (card FW state)\n")
+        
+def log_data_2_interpretor(id = None):
+    log_event = get_log_event_from_id(id)
+    if log_event == 'log_event_trigger_left' or log_event == 'log_event_trigger_right' :
+        print(" (card id)\n")
+    elif log_event == 'log_event_button_left' or log_event == 'log_event_button_right' or log_event == 'log_event_button_middle' :
+        print("\n")
+    elif log_event == 'log_event_sys_powerup' :
+        print(" (battery reading (LSB))\n")
+    elif log_event == 'log_event_battery_reading' :
+        print(" (battery reading (LSB))\n")
+    elif log_event == 'log_event_app_session_id' :
+        print(" (app session id (LSB))\n")
+    else :
+        print(" (system timestamp in seconds)\n")
+        
+def log_data_3_interpretor(id = None):
+    log_event = get_log_event_from_id(id)
+    if log_event == 'log_event_battery_reading' :
+        print(" (battery reading value)\n")
+    elif log_event == 'log_event_card_swiped' :
+        print(" (last 4 digits of the card swiped)\n")
+    elif log_event == 'log_event_sw_watchdog_warn' :
+        print(" (ignore)\n")
+    else :
+        print(" (RTC timestamp counter at 32KHz)\n")
