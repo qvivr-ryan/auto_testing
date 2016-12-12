@@ -174,7 +174,7 @@ def log_data_1_interpretor(id = None):
     if log_event == 'log_event_trigger_left' or log_event == 'log_event_trigger_right' :
         print(" (bitwidth)\n")
     elif log_event == 'log_event_button_left' or log_event == 'log_event_button_right' or log_event == 'log_event_button_middle' :
-        print(" (card FW state\n")
+        print(" (card FW state)\n")
     elif log_event == 'log_event_sys_powerup' :
         print(" (battery reading (MSB))\n")
     elif log_event == 'log_event_battery_reading' :
