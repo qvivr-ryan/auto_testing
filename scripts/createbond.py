@@ -91,7 +91,7 @@ def create_bond(device_address=None, adapter_address=None):
             try:
                 print("disconnecting temporarily ...")
                 con.sendline("disconnect " + device_address.upper())
-                con.expect("Connected: no", timeout=3)
+                con.expect("Connected: no", timeout=5)
             except(pexpect.TIMEOUT):
                 print("could not disconnect.. ")
                 con.sendline("quit")

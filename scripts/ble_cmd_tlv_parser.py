@@ -8,6 +8,8 @@ import time
 from binascii import hexlify
 from byte_data_converter import shortToBytes, longToBytes, bytesToShortBigEndian, bytesToLongBigEndian, bytesToLongLittleEndian
 
+import globals
+
 #Global TLV IDs
 tlv_id_table = []
 
@@ -60,6 +62,12 @@ def is_tlv_valid(tlv_id = None):
     print("is_tlv_valid(): tlv_id = 0x%x is invalid\r\n" % tlv_id)
     return False
 
+def get_tlv_id(tlv_type = None):
+    for x in tlv_id_table:
+        if x[0] == tlv_type:
+            return x[1]
+    return 0
+
 def get_tlv_type(tlv_id = None):
     for x in tlv_id_table:
         if x[1] == tlv_id:
@@ -107,12 +115,16 @@ def ble_cmd_tlv_parser (value = None):
     return
 
 def tlv_intepretor (tlv_id = None, tlv_len = None, value = None):
+
     if(get_tlv_type(tlv_id) == 'FW_VERSION_TLV_ID'):
         print("Firmware version is: %d.%d.%d.%d\r\n" % (value[3], value[2], value[1], value[0]))
     elif(get_tlv_type(tlv_id) == 'FW_CID_TLV_ID'):
         print("Firmware card id is: %d\r\n" % (value[0]))
     elif(get_tlv_type(tlv_id) == 'LOG_DATA_TLV_ID'):
         log_data_interpretor(tlv_len, value)
+    elif(get_tlv_type(tlv_id) == 'CHALLENGE_REQ_TLV_ID'):
+        globals.card_challenge_received = True
+        globals.card_challenge_tlv = value
     else:
         print("tlv_interpretor(): Uninterpretated TLV\r\n")
 

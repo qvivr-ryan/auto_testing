@@ -13,3 +13,5 @@ ble_cmd_tx_rx.py: script to form BLE command data packets and send them to the S
 ble_cmd_tlv_parser.py: script to parse incoming TLVs
 
 byte_data_converter.py: logic to convert packet data into values and vice versa
+
+globals.py: global variables and their initialization routine

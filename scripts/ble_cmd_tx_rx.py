@@ -5,8 +5,12 @@ import binascii
 import pygatt
 import time
 from binascii import hexlify
+from hashlib import sha256
 from byte_data_converter import shortToBytes, longToBytes, bytesToShortBigEndian, bytesToLongBigEndian
-from ble_cmd_tlv_parser import ble_cmd_tlv_parser
+from ble_cmd_tlv_parser import ble_cmd_tlv_parser, get_tlv_id
+
+import globals
+
 
 MAX_TX_PKT_LEN = 20
 uuid_r='6e400003-b5a3-f393-e0a9-e50e24dcca9e'
@@ -193,6 +197,91 @@ def ble_cmd_response_status_check(device=None):
         return False
 
 
+"""
+Function to send ble cmd response packet to the peer 
+"""
+def ble_cmd_response_transmit(device=None, cmd=None, response_status=None, cmd_response_payload=None):
+
+    """cmd_response_paylaod is prepended by the cmd header and then split into BLE MTUs to transmit
+    cmd_response_payload is assumed to be a bytearray """
+    #print("ble_cmd_response_transmit(): cmd is %s\r\n" % (cmd))
+    cmd_id = get_cmd_id_bytearray(cmd)
+    cmd_response_id = get_cmd_id_bytearray('cmd_response')
+    #print("ble_cmd_response_transmit(): cmd_id is: %s\r\n" % (binascii.hexlify(cmd_id)))
+    #print(binascii.hexlify(cmd_id))
+
+    #print("ble_cmd_transmit(): cmd_payload_len is %d\r\n" % (cmd_payload_len))
+    cmd_response_payload_tx_done_len = 0
+
+    # Mark the receive buffer as free
+    #ble_command_buffer_status = CMD_BUF_FREE
+
+    """ Create first command packet """
+    first_packet = bytearray([])
+    first_packet_len = 0
+    first_packet.extend(cmd_response_id)
+    first_packet_len += 2    
+    first_packet.extend(cmd_id)
+    first_packet_len += 2
+    #print("ble_cmd_response_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+    # Create four bytes from the integer
+    pkt_seq_no = 0
+    pkt_seq_no_bytes = shortToBytes(pkt_seq_no)
+    #print(pkt_seq_no_bytes)
+    first_packet.extend(pkt_seq_no_bytes)
+    first_packet_len += 2
+    #print("ble_cmd_response_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+    cmd_response_payload_total = bytearray([])
+    cmd_response_payload_total.extend(shortToBytes(response_status))
+    cmd_response_payload_total.extend(cmd_response_payload)
+    first_packet.extend(longToBytes(crc16_compute(cmd_response_payload_total)))
+    first_packet_len += 4
+    #print("ble_cmd_response_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+    cmd_response_payload_len = len(cmd_response_payload_total)
+    first_packet.extend(shortToBytes(cmd_response_payload_len))
+    first_packet_len += 2
+    #print("ble_cmd_response_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+    if cmd_response_payload_len == 0:
+        #print("ble_cmd_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+        """ Send the first packet """
+        device.char_write(uuid_w,first_packet,wait_for_response=False)
+        return
+    if cmd_response_payload_len <= (MAX_TX_PKT_LEN - first_packet_len):
+        first_packet.extend(cmd_response_payload_total)
+        #print("ble_cmd_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+        cmd_response_payload_tx_done_len = cmd_response_payload_len
+        """ Send the first packet """
+        device.char_write(uuid_w,first_packet,wait_for_response=False)
+        return
+    else:
+        first_packet.extend(cmd_response_payload_total[0 : MAX_TX_PKT_LEN - first_packet_len])
+        #print("ble_cmd_response_transmit(): first_packet is: %s\r\n" % (binascii.hexlify(first_packet)))
+        cmd_response_payload_tx_done_len = (MAX_TX_PKT_LEN -first_packet_len)
+        """ Send the first packet """
+        device.char_write(uuid_w,first_packet,wait_for_response=False)
+        
+        while (cmd_response_payload_tx_done_len < cmd_response_payload_len):
+            new_packet = bytearray([])
+            new_packet_len = 0
+            pkt_seq_no += 1
+            pkt_seq_no_bytes = shortToBytes(pkt_seq_no)
+            #print(pkt_seq_no_bytes)
+            new_packet_len += 2
+            new_packet.extend(pkt_seq_no_bytes)
+            if(cmd_response_payload_tx_done_len + MAX_TX_PKT_LEN - 2 < cmd_response_payload_len):
+                new_packet.extend(cmd_response_payload_total[cmd_response_payload_tx_done_len : cmd_response_payload_tx_done_len + MAX_TX_PKT_LEN - new_packet_len])
+                #print("ble_cmd_response_transmit(): new_packet is: %s\r\n" % (binascii.hexlify(new_packet)))
+                cmd_response_payload_tx_done_len += (MAX_TX_PKT_LEN - new_packet_len)
+            else:
+                new_packet.extend(cmd_response_payload_total[cmd_response_payload_tx_done_len : cmd_response_payload_len])
+                #print("ble_cmd_response_transmit(): new_packet is: %s\r\n" % (binascii.hexlify(new_packet)))
+                cmd_response_payload_tx_done_len += (cmd_response_payload_len - cmd_response_payload_tx_done_len)
+            """ Send new packet """
+            device.char_write(uuid_w,new_packet,wait_for_response=False)
+
+
+
+    
 ############################################################################
 # Functions related to handling of received BLE packets, reassembling them #
 # and processing the received commands or command responses                #
@@ -211,6 +300,9 @@ local_cmd_response_payload = bytearray([])
 local_cmd_response_payload_len = 0
 local_expected_payload_len = 0
 
+rx_cmd_id = 0
+incoming_cmd_id = 0
+
 def ble_packet_receive(handle=None, value=None):
     # declare all the global variables used
     global local_cmd_response_payload
@@ -222,6 +314,8 @@ def ble_packet_receive(handle=None, value=None):
     global ble_command_buffer_status
     global pending_cmd_id
     global local_expected_payload_len
+    global rx_cmd_id
+    global incoming_cmd_id
     # check the type of the function parameter
     #print("ble_packet_receive(): type of value is %s\r\n" % type(value))
     packet_len = len(value)
@@ -295,8 +389,39 @@ def ble_packet_receive(handle=None, value=None):
             ble_cmd_tlv_parser(local_cmd_response_payload)
         ble_command_buffer_status = CMD_BUF_FREE
         pending_cmd_id = 0
+        ble_cmd_receive()
 
     return
 
+"""
+Function to process ble cmd packet received from the peer 
+"""
+def ble_cmd_receive():
+    global rx_cmd_id
 
+    #print("ble_cmd_receive(): rx_cmd_id = %d\r\n" % rx_cmd_id)
+    if rx_cmd_id == get_cmd_id('put_session_info'):
+        if globals.card_challenge_received == True:
+            #print("ble_cmd_receive(): card challenge is 0x%s\r\n" %  hexlify(globals.card_challenge_tlv))
+            challenge = bytearray([])
+            challenge.extend(globals.card_challenge_tlv)
+            #print("ble_cmd_receive(): challenge is 0x%s\r\n" %  hexlify(challenge))
+            challenge.extend(bytearray.fromhex("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"))
+            #print("ble_cmd_receive(): challenge is 0x%s\r\n" %  hexlify(challenge))
+            h = sha256()
+            h.update(challenge)
+            aux = h.digest()
+            #print("ble_cmd_receive(): challenge hash is 0x%s\r\n" %  hexlify(aux))
+
+            cmd_response_payload = bytearray([])
+            cmd_response_payload.extend(shortToBytes(get_tlv_id('CHALLENGE_RSP_TLV_ID')))
+            cmd_response_payload.extend(shortToBytes(len(aux)))
+            cmd_response_payload.extend(aux)
+            ble_cmd_response_transmit(globals.device, 'put_session_info', 0, cmd_response_payload)
+            globals.card_challenge_received = False
+            globals.card_challenge_tlv = bytearray([])
+
+    elif rx_cmd_id == get_cmd_id('cmd_response'):
+        if incoming_cmd_id == get_cmd_id('backend_auth_1') :
+            ble_cmd_transmit(globals.device, 'backend_auth_2', bytearray.fromhex("0197 0020 59a1 4139 b1af b7d9 903e 8abc 0f3f f5d9 1b45 c287 75c4 502c 8a94 237a 2926 1272"))
 #ble_cmd_transmit(None, 'get_fw_version', bytearray([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 ]))
