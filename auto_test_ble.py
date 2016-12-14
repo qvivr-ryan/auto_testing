@@ -15,6 +15,7 @@ from createbond import *
 from inputs import *
 from ble_cmd_tlv_parser import *
 from jlinkflash import flashnrf51
+from jlinkflashFW import flashFW
 
 mydict = {}
 filename = "sequences.txt"
@@ -24,6 +25,7 @@ io.setup(inputPins,io.OUT)
 
 inputDict = {"START":partial(setup),
 	     "FLASH":partial(flashnrf51),
+             "FLASHFW":partial(flashFW),
 	     "BLE":partial(connectBle),
 	     "ONBOARD":partial(onboard),
 	     "UP":partial(pressLow,pin=UP),
@@ -47,8 +49,6 @@ hwDict = {"UP":log_data_table[4][0],
 
 def writeToExpected(key,delay):
 	expected = open(full_e,'a+')
-	##if hwDict.has_key(key) : expected.write(hwDict[key] + '\n')
-	##expected.write(hwDict[key] + '\n') if hwDict.has_key(key) else None
 	if hwDict.has_key(key):
 		expected.write(hwDict[key] + '\n')
 		## ADD FN,DELAY TO LIST ##
@@ -76,8 +76,9 @@ def runSeq(seq):
 			key = event[0].upper()
 			delay = event[1]
 			print key
-			inputDict[key](startNum=index,d=event[1]) if key == "P" else inputDict[key](d=event[1])
+			if inputDict.has_key(key):inputDict[key](startNum=index,d=event[1]) if key == "P" else inputDict[key](d=event[1])
 			writeToExpected(key,delay)
+		outputList[:]=[] # clear list after every sequence
 
 # user menu for selecting sequences to run
 def menu():
@@ -93,6 +94,51 @@ def menu():
 	except KeyboardInterrupt:
 		print "Cancelled by user.. exiting"
 		sys.exit(0)
+
+def randomSequence(filename):
+	f = open(filename,'a+')
+	head = raw_input("Title of sequence: ")
+
+	for line in f:
+		while str(line).split(':')[0] == head:
+			print "Title exists!"
+			head = raw_input("Title of sequence: ")			
+
+	f.write(head + ":start,10;")
+	for item in range(r.randrange(50)):
+		key = mydict.keys()[r.randint(0,len(mydict)-1)]
+		if key != "START" or "P" : f.write(key + "," + str(round(r.uniform(0.000,10.000),3)))
+		f.write(";")
+	f.write("trg_l,1;p,45\n")
+	f.close()
+
+def addToFile(filename):
+	f = open(filename,'a+')
+	head = raw_input("Title of sequence: ")
+
+	for line in f:
+		while str(line).split(':')[0] == head:
+			print "Title exists!"
+			head = raw_input("Title of sequence: ")			
+
+	maxItems = raw_input("How many functions for this sequence? ")
+	for item in range(int(maxItems)):
+		print "\nList of functions:"
+		print "START, FLASH, FLASHFW, P(STOP), UP, SEL, DOWN"
+		print "BLE, RM, DISCONNECT, SETLOG, GETLOG, ONBOARD"
+		print "FW, TRG_L, TRG_R, ADD1, ADD2, ADD3\n"
+		print "\nNote: Every sequence ends with TRL_L,1;P,45"
+
+		key = raw_input("Which function do you want to run? ")
+		while not mydict.has_key(key.upper()):
+			print "Not a listed function."
+			key = raw_input("Which function do you want to run? ")
+		value = raw_input("What is the delay (min: 0.001s)? ")
+
+		if mydict.has_key(key):f.write(head + ":" + key.upper() + "," + value + ";")
+
+	f.write("trg_l,1;p,45\n")
+	f.close()
 
 def main():
 	try:

@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+
+#filename = auto_test_ble_v2.py
+#author = "Ryan Gaspar"
+#date = "December 2, 2016"
+
+import RPi.GPIO as io
+import csv,sys
+from functools import partial
+from time import sleep
+
+from testble import connectBle
+from testble import getFW
+from testble import delAll
+from testble import addCard
+from createbond import remove_bond
+from inputs import *
+from jlinkflash import flashnrf51
+
+#DEVICE_ADD = "CE:58:14:21:45:F1" # Swyp4169
+#DEVICE_ADD = "FC:08:AD:FA:63:3A" # Swyp5899
+DEVICE_ADD = "E1:51:31:FC:DB:29" # Swyp4119
+ADAPTER_ADD = "B8:27:EB:0B:35:77"
+
+mydict = {}
+filename = "test.txt"
+t = ''
+
+PAYLOAD1 = "0065 00044d6f 6d310066 0001 01006700 10343432 37343334 30323932 3030 30303100 68000431 38303300 69000330 3031 006d0001 01006b00 41423434 32373433 3430 32393230 30303031 5e474153 5041522f 4d41 52494120 415e3138 30333132 31313030 3030 30303031 30303030 30303836 37303030 3030 303f006c 00263b34 34323734 33343032 3932 30303030 313d3138 30333132 31313030 3030 30303031 3836373f"
+PAYLOAD2 = "0065 00054769 66743200 6600 01020067 00103434 32373433 34303239 3230 30303032 00680004 31383033 00690003 3030 32006d00 0101006b 00414234 34323734 3334 30323932 30303030 325e4741 53504152 2f4d 41524941 20415e31 38303331 32313130 3030 30303030 31303030 30303038 36373030 3030 30303f00 6c00263b 34343237 34333430 3239 32303030 30323d31 38303331 32313130 3030 30303030 31383637 3f"
+PAYLOAD3 = "0065 00086c6f 79616c74 7933 00660001 03006700 10343432 37343334 3032 39323030 30303300 68000431 38303300 6900 03303033 006d0001 01006b00 41423434 3237 34333430 32393230 30303033 5e474153 5041 522f4d41 52494120 415e3138 30333132 3131 30303030 30303031 30303030 30303836 3730 30303030 303f006c 00263b34 34323734 3334 30323932 30303030 333d3138 30333132 3131 30303030 30303031 3836373f"
+
+UP    = 29
+SEL   = 31
+DOWN  = 33
+TRG_L = 35 #15 #35
+TRG_R = 37 #13 #37
+
+io.setmode(io.BOARD)
+
+inputDict = {"UP":partial(pressLow,pin=UP),
+	     "SEL":partial(pressLow,pin=SEL),
+	     "DOWN":partial(pressLow,pin=DOWN),
+	     "TRG_L":partial(triggerSensor,pin=TRG_L),
+	     "TRG_R":partial(triggerSensor,pin=TRG_R),
+	     "ADD1":partial(addCard,pl=PAYLOAD1),
+	     "ADD2":partial(addCard,pl=PAYLOAD2),
+	     "ADD3":partial(addCard,pl=PAYLOAD3),
+	     "DEL":partial(delAll),
+	     "FW":partial(getFW),
+	     "P":partial(end,d=0)}
+
+def readtable(filename):
+	with open(filename,'r') as f:
+		for line in f:
+			try:
+				temp = line.strip().split(":")
+				#print [event.split(",") for event in temp[1].split("\t")]
+				mydict[temp[0]] = map(lambda item: tuple((str(item[0]),float(item[1]))), [event.split(",") for event in temp[1].split(";")])
+			except Exception :
+				print("Error reading line: %s" % line)
+
+# readin file and run selected sequences
+def runSeq(seq):
+	if seq.strip() == '': # run all sequences
+		seqlist = mydict.keys()
+	else:
+		seqlist = [event.strip() for event in seq.split(',')] # run specific set of sequences
+	for index in seqlist:
+		for event in mydict[index]:
+			inputDict[event[0]](d=event[1])
+
+# user menu for selecting sequences to run
+def menu():
+	global filename
+	global seq
+	try:
+		print ("Enter test panel file [%s] :" % filename)
+		s = raw_input().strip()
+		if s != '':
+			filename = s
+		seq = raw_input("Enter sequences to be run separated by commas (If no entry, all sequences will be run) : ")
+	except KeyboardInterrupt:
+		print "Cancelled by user.. exiting"
+		sys.exit(0)
+
+def main():
+	try:
+		remove_bond(DEVICE_ADD,ADAPTER_ADD)
+		sleep(1)
+		setup()
+		# load firmware on test bed.
+		flashnrf51(jlinkscript='Nordic/flash_nordic.jlink')
+		sleep(5)
+		#
+		connectBle()
+		menu()
+		readtable(filename)
+		runSeq(seq)
+	except KeyboardInterrupt:
+		print("Cancelled by user... exiting")
+		sys.exit(0)
+#	finally:
+#		io.output(SEL,io.LOW)
+
+if __name__ == '__main__':
+	main()

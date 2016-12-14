@@ -188,7 +188,7 @@ def log_data_interpretor(tlv_len = None, value = None):
         i += 4
         #print("i = %d\n" % i)
     results.close() 
-    compare(full_e,full_r,full_log,actLine(),expLine(),currLineNum())    
+    compare(full_e,full_r,actLine(),expLine(),currLineNum())    
 
 def log_data_1_interpretor(id = None):
     log_event = get_log_event_from_id(id)
