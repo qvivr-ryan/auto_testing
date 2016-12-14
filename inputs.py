@@ -33,6 +33,9 @@ expected = open(full_e,'a+')
 logName = "seqLog_" + strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
 full_log = os.path.join(DIR,logName)
 
+r = "actual_" + strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
+full_r = os.path.join(DIR,r)
+
 outputList = []
 
 io.setmode(io.BOARD)
@@ -106,6 +109,7 @@ def compare(e,a,act_list,exp_list,lineNum):
 	while expected_line != '':
 		# if cannot find match before EOF
 		if actual_line == '':
+			not_found = True
 			actual.close()
 			actual = open(a)
 			for line in range(act_list):
@@ -145,12 +149,21 @@ def end(startNum,d):
 	sleep(d)
 #	io.output(inputPins,io.LOW)
 
+	results = open(full_r, 'a+')
+	results.write("END OF SEQUENCE " + str(startNum) + ": ")
+
 	print "SEQUENCE " + str(startNum),
-	if notFound() : print "FAILED"
-	else : print "PASSED"
+	if notFound() :
+		print "FAILED"
+		results.write("FAILED\n")
+	else :
+		print "PASSED"
+		results.write("PASSED\n")
 
 	##print outputList
+	
 	expected.close()
+	results.close()
 
 	seqLog = open(full_log, 'a+')
 	seqLog.write(str(startNum) + ": FAILED | ") if notFound() else seqLog.write(str(startNum) + ": PASSED | ")
@@ -162,5 +175,5 @@ def end(startNum,d):
 	outputList[:]=[] # clear list
 	l = 0
 	td = 0 # clear timestamp
-	print resetLinNum() # clear line numbers
-	print currLineNum()
+	resetLineNum() # clear line numbers
+	currLineNum()
