@@ -97,6 +97,25 @@ def create_bond(device_address=None, adapter_address=None):
         print("unable to find device %s" % (device_address))
         return(1)
 
+def disconnect(device_address=None, adapter_address=None):
+    """Use the 'bluetoothctl' program to create BLE bond.
+    """
+    con = pexpect.spawn('sudo bluetoothctl')
+    con.expect("bluetooth", timeout=1)
+
+    while True:
+	    try:
+	        print("disconnecting temporarily ...")
+	        con.sendline("disconnect " + device_address.upper())
+	        con.expect("Connected: no", timeout=3)
+	    except(pexpect.TIMEOUT):
+	        print("could not disconnect.. ")
+		print("trying again...")
+                continue
+            break
+    con.sendline("quit")
+    return(0)
+
 def remove_bond(device_address=None, adapter_address=None):
     """Use the 'bluetoothctl' program to create BLE bond.
     """

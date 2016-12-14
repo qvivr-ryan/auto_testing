@@ -39,9 +39,11 @@ io.setmode(io.BOARD)
 
 def setup(d):
 	print "Powering on..."
-#	io.setup(inputPins,io.OUT)
+	io.setup(inputPins,io.OUT)
 	io.output(btnPins,io.HIGH)
 	io.output(sensorPins,io.LOW)
+
+	pressLow(SEL,1)
 	sleep(d)
 
 def pressLow(pin,d):
@@ -68,42 +70,38 @@ def coilFire(pins,d):
 	for pin in pins:
 		triggerSensor(pins)
 
-#def factoryReset():
-#	sleep(5)
-#	io.output(DOWN,io.LOW)
-#	io.output(UP,io.LOW)
-#	sleep(10)
-#	io.output(DOWN,io.HIGH)
-#	io.output(UP,io.HIGH)
-#	sleep(5)
-#	pressLow(UP)
-
 aline = 1
 eline = 1
 
 not_found = False
 l = 0
+td = 0
 
 def actLine(): return aline
 def expLine(): return eline
 def notFound(): return not_found
-def currLineNum(): return l
+def currLineNum():
+	global l
+	return l
+def resetLineNum():
+	global l
+	l = 0
+	return l
 
-def compare(e,a,s,act_list,exp_list,lineNum):
-	global eline,aline,not_found,l
-
+def compare(e,a,act_list,exp_list,lineNum):
+	global eline,aline,not_found,l,td
+	## INIT ##
 	expected = open(e)
 	actual = open(a)
-#	seqLog = open(s, 'a+')
 
 	for line in range(act_list):
 		actual_line = actual.readline().strip()
 	for line in range(exp_list):
 		expected_line = expected.readline().strip()
 
-#	temp = int(str(actual_line).split(',')[1])
-	td = 0
-	lineNum = 0
+#	temp = td
+#	td = int(str(actual_line).split(',')[1])
+	not_found = False
 
 	while expected_line != '':
 		# if cannot find match before EOF
@@ -114,11 +112,8 @@ def compare(e,a,s,act_list,exp_list,lineNum):
 				actual_line = actual.readline().strip()
 		# if match found
 		if actual_line.find(expected_line) != -1:
-#			seqLog.write("Expected line %d matches actual line %d! " % (exp_list,act_list) + expected_line + " > " + actual_line + '\n')
 			temp = td
 			outputList[lineNum].append(str(actual_line).split(',')[0])
-#			if str(actual_line).split(',')[0] == 'log_event_card_swiped' : td = int(str(actual_line).split(',')[2])
-#			else : td = int(str(actual_line).split(',')[1])
 			td = int(str(actual_line).split(',')[1])
 			outputList[lineNum].append(str(td-temp))
 			actual_line = actual.readline().strip()
@@ -127,37 +122,34 @@ def compare(e,a,s,act_list,exp_list,lineNum):
 		else:
 			if expected_line.find("SEQUENCE") != -1 : pass #lineNum += 1
 			else:
-#				seqLog.write("Line %d not found during actual test. " % exp_list + expected_line + '\n')
 				not_found = True
 				outputList[lineNum].append("FAILED")
 				lineNum += 1
-#		if expected_line.find("SEQUENCE") != -1 : lineNum += 1
-#		else : outputList[lineNum-1].append(expected_line)
 		expected_line = expected.readline().strip()
 		exp_list += 1
 
 	aline = act_list
 	eline = exp_list
-###	l = lineNum
+	l = lineNum
 
 	actual.close()
 	expected.close()
-#	seqLog.close()
 
 	actLine()
 	expLine()
 	notFound()
-####	currLineNum()
+	#currLineNum()
 
 def end(startNum,d):
+	global l,td
 	sleep(d)
-	io.output(inputPins,io.LOW)
+#	io.output(inputPins,io.LOW)
 
 	print "SEQUENCE " + str(startNum),
 	if notFound() : print "FAILED"
 	else : print "PASSED"
 
-#	print outputList
+	##print outputList
 	expected.close()
 
 	seqLog = open(full_log, 'a+')
@@ -166,4 +158,9 @@ def end(startNum,d):
 	seqLog.write('\n')
 	seqLog.close()
 	sleep(2)
+
 	outputList[:]=[] # clear list
+	l = 0
+	td = 0 # clear timestamp
+	print resetLinNum() # clear line numbers
+	print currLineNum()

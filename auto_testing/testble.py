@@ -82,6 +82,8 @@ def connectBle(d):
 	    #adapter.stop()
 	    print("exiting...")
 
+def disconnectBLE(d): disconnect(DEVICE_ADD, ADAPTER_ADD)
+
 def onboard(d):
 	#do_onboarding = raw_input("\n Do you want to do onboarding? (Y/N)")
 	#if do_onboarding == 'Y' or do_onboarding == 'y' :
