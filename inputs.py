@@ -25,19 +25,6 @@ POWER_ON_DELAY = 0.020
 BUTTON_PRESS_DELAY = 0.030
 COIL_FIRE_DELAY = 0.100
 
-DIR = "/home/pi/logs"
-e = "expected_" + strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
-full_e = os.path.join(DIR,e)
-expected = open(full_e,'a+')
-
-logName = "seqLog_" + strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
-full_log = os.path.join(DIR,logName)
-
-r = "actual_" + strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
-full_r = os.path.join(DIR,r)
-
-outputList = []
-
 io.setmode(io.BOARD)
 
 def setup(d):
@@ -73,107 +60,120 @@ def coilFire(pins,d):
 	for pin in pins:
 		triggerSensor(pins)
 
-aline = 1
-eline = 1
+DIR = "/home/pi/logs"
+timestamp = strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
+expected_path = os.path.join(DIR,("expected_"+timestamp))
+actual_path = os.path.join(DIR,("actual_"+timestamp))
+summary_path = os.path.join(DIR,("summary_"+timestamp))
+
+expected_file = open(expected_path,'a+')
+
+outputList = []
+
+actual_start = 1
+expected_start = 1
 
 not_found = False
-l = 0
+outputList_start = 0
 td = 0
 
-def actLine(): return aline
-def expLine(): return eline
+def actLine(): return actual_start
+def expLine(): return expected_start
 def notFound(): return not_found
 def currLineNum():
-	global l
-	return l
+	global outputList_start
+	return outputList_start
 def resetLineNum():
-	global l
-	l = 0
-	return l
+	global outputList_start
+	outputList_start = 0
+	return outputList_start
 
-def compare(e,a,act_list,exp_list,lineNum):
-	global eline,aline,not_found,l,td
+def compare(e,a,actual_current_lineNum,expected_current_lineNum,output_lineNum):
+#	global eline,aline,not_found,l,td
+	global expected_start,actual_start,not_found,outputList_start,td
+
 	## INIT ##
-	expected = open(e)
-	actual = open(a)
+	expected_file = open(e)
+	actual_file = open(a)
 
-	for line in range(act_list):
-		actual_line = actual.readline().strip()
-	for line in range(exp_list):
-		expected_line = expected.readline().strip()
+	for line in range(actual_current_lineNum):
+		actual_current_line = actual_file.readline().strip()
+	for line in range(expected_current_lineNum):
+		expected_current_line = expected_file.readline().strip()
 
 #	temp = td
 #	td = int(str(actual_line).split(',')[1])
 	not_found = False
 
-	while expected_line != '':
+	while expected_current_line != '':
 		# if cannot find match before EOF
-		if actual_line == '':
+		if actual_current_line == '':
 			not_found = True
-			actual.close()
-			actual = open(a)
-			for line in range(act_list):
-				actual_line = actual.readline().strip()
+			actual_file.close()
+			actual_file = open(a)
+			for line in range(actual_current_lineNum):
+				actual_current_line = actual_file.readline().strip()
 		# if match found
-		if actual_line.find(expected_line) != -1:
+		if actual_current_line.find(expected_current_line) != -1:
 			temp = td
-			outputList[lineNum].append(str(actual_line).split(',')[0])
-			td = int(str(actual_line).split(',')[1])
-			outputList[lineNum].append(str(td-temp))
-			actual_line = actual.readline().strip()
-			act_list += 1
-			lineNum += 1
+			outputList[output_lineNum].append(str(actual_current_line).split(',')[0])
+			td = int(str(actual_current_line).split(',')[1])
+			outputList[output_lineNum].append(str(td-temp))
+			actual_current_line = actual_file.readline().strip()
+			actual_current_lineNum += 1
+			output_lineNum += 1
 		else:
-			if expected_line.find("SEQUENCE") != -1 : pass #lineNum += 1
+			if expected_current_line.find("SEQUENCE") != -1 : pass #lineNum += 1
 			else:
 				not_found = True
-				outputList[lineNum].append("FAILED")
-				lineNum += 1
-		expected_line = expected.readline().strip()
-		exp_list += 1
+				outputList[output_lineNum].append("FAILED")
+				output_lineNum += 1
+		expected_current_line = expected_file.readline().strip()
+		expected_current_lineNum += 1
 
-	aline = act_list
-	eline = exp_list
-	l = lineNum
+	actual_start = actual_current_lineNum
+	expected_start = expected_current_lineNum
+	outputList_start = output_lineNum
 
-	actual.close()
-	expected.close()
+	actual_file.close()
+	expected_file.close()
 
-	actLine()
-	expLine()
-	notFound()
-	#currLineNum()
+#	actLine()
+#	expLine()
+#	notFound()
 
 def end(startNum,d):
-	global l,td
+	global outputList_start,td,actual_start,not_found
 	sleep(d)
 #	io.output(inputPins,io.LOW)
 
-	results = open(full_r, 'a+')
-	results.write("END OF SEQUENCE " + str(startNum) + ": ")
+	actual_file = open(actual_path, 'a+')
+	actual_file.write("END OF SEQUENCE " + str(startNum) + ": ")
 
 	print "SEQUENCE " + str(startNum),
-	if notFound() :
+	if not_found:#notFound() :
 		print "FAILED"
-		results.write("FAILED\n")
+		actual_file.write("FAILED\n")
 	else :
 		print "PASSED"
-		results.write("PASSED\n")
-
+		actual_file.write("PASSED\n")
 	##print outputList
 	
-	expected.close()
-	results.close()
+	expected_file.close()
+	actual_file.close()
 
-	seqLog = open(full_log, 'a+')
-	seqLog.write(str(startNum) + ": FAILED | ") if notFound() else seqLog.write(str(startNum) + ": PASSED | ")
-	seqLog.writelines(', '.join(line) + ' | ' for line in outputList)
-	seqLog.write('\n')
-	seqLog.close()
+	summary_file = open(summary_path, 'a+')
+	summary_file.write(str(startNum) + ": FAILED | ") if not_found else summary_file.write(str(startNum) + ": PASSED | ")
+	summary_file.writelines(', '.join(line) + ' | ' for line in outputList)
+	summary_file.write('\n')
+	summary_file.close()
 	sleep(2)
 
+	actual_start += 1
+	actLine()
+
 	outputList[:]=[] # clear list
-	l = 0
+	outputList_start = 0
 	td = 0 # clear timestamp
-	resetLineNum() # clear line numbers
-	currLineNum()
+#	resetLineNum() # clear line numbers
+#	currLineNum()

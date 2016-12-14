@@ -2,8 +2,9 @@
 
 import pexpect, sys
 from sys import platform
+from time import sleep
 
-def flashFW(jlinkscript='Nordic/flashFW_nordic.jlink'):
+def flashFW(d,jlinkscript='Nordic/flashFW_nordic.jlink'):
 
     cmdline = "/opt/jlink/JLinkExe -device nrf51822 -if swd -speed 4000 " + jlinkscript
 #    cmdline = "jlink -device nrf51822 -if swd -speed 4000 " + jlinkscript
@@ -14,6 +15,7 @@ def flashFW(jlinkscript='Nordic/flashFW_nordic.jlink'):
     else:
         print runresult
         print "\n\nSuccess flashing nrf51!\n\n"
+    sleep(d)
     
 if __name__ == '__main__':
     if len(sys.argv) == 2:

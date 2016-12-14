@@ -45,16 +45,21 @@ inputDict = {"START":partial(setup),
 hwDict = {"UP":log_data_table[4][0],
 	  "SEL":log_data_table[5][0],
 	  "DOWN":log_data_table[3][0],
-	  "TRG_L":log_data_table[12][0]}
+	  "TRG_R":log_data_table[12][0],
+	  "TRG_L":log_data_table[12][0],
+	  "ADD1":log_data_table[19][0],
+	  "ADD2":log_data_table[19][0],
+	  "ADD3":log_data_table[19][0],
+	  "DEL":log_data_table[21][0]}
 
 def writeToExpected(key,delay):
-	expected = open(full_e,'a+')
+	expected_file = open(expected_path,'a+')
 	if hwDict.has_key(key):
-		expected.write(hwDict[key] + '\n')
+		expected_file.write(hwDict[key] + '\n')
 		## ADD FN,DELAY TO LIST ##
 		outputList.append([key,str(delay)])
 #		outputList.append(str(delay))
-	expected.close()
+	expected_file.close()
 
 def readtable(filename):
 	global startNum
@@ -71,7 +76,7 @@ def readtable(filename):
 def runSeq(seq):
 	seqlist = mydict.keys() if seq.strip() == '' else seq.strip().split(',')
 	for index in seqlist:
-		open(full_e, 'a+').write("SEQUENCE " + index + '\n')
+		open(expected_path, 'a+').write("SEQUENCE " + index + '\n')
 		for event in mydict[index]:
 			key = event[0].upper()
 			delay = event[1]
@@ -90,14 +95,14 @@ def menu():
 		##s = filename
 		##filename = s if s != '' else None
 #		if s != '' : filename = s
-		seq = raw_input("Enter sequences to be run separated by commas (If no entry, all sequences will be run) : ")
+		seq = raw_input("Enter sequences to be run separated by commas (If no entry, all sequences will be run) : ").upper()
 	except KeyboardInterrupt:
 		print "Cancelled by user.. exiting"
 		sys.exit(0)
 
 def randomSequence(filename):
 	f = open(filename,'a+')
-	head = raw_input("Title of sequence: ")
+	head = raw_input("Title of sequence: ").upper()
 
 	for line in f:
 		while str(line).split(':')[0] == head:
@@ -114,7 +119,7 @@ def randomSequence(filename):
 
 def addToFile(filename):
 	f = open(filename,'a+')
-	head = raw_input("Title of sequence: ")
+	head = raw_input("Title of sequence: ").upper()
 
 	for line in f:
 		while str(line).split(':')[0] == head:

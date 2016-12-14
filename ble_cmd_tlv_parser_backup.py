@@ -11,6 +11,10 @@ from inputs import *
 
 import globals
 
+#DIR = "/home/pi/logs"
+#r = "actual_" + time.strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
+#full_r = os.path.join(DIR,r)
+
 #Global TLV IDs
 tlv_id_table = []
 
@@ -150,10 +154,7 @@ log_data_table.append(['log_event_new_bond_fail', 15])
 log_data_table.append(['log_event_sw_watchdog_warn', 16])
 log_data_table.append(['log_event_app_session_id',17])
 log_data_table.append(['log_event_battery_reading',18])
-log_data_table.append(['log_event_card_added',19])
-log_data_table.append(['log_event_card_deleted',20])
-log_data_table.append(['log_event_all_cards_deleted',21])
-log_data_table.append(['log_event_max',22])
+log_data_table.append(['log_event_max',19])
 
 def get_log_event_from_id(id = None):
     for x in log_data_table:
@@ -203,8 +204,6 @@ def log_data_1_interpretor(id = None):
         print(" (app session id (MSB))\n")
     elif log_event == 'log_event_card_swiped' :
         print(" (ignore)\n")
-    elif log_event == 'log_event_card_added' :
-        print(" (card index)\n")
     else :
         print(" (card FW state)\n")
         
