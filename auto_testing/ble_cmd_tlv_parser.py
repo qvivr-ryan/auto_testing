@@ -11,9 +11,9 @@ from inputs import *
 
 import globals
 
-DIR = "/home/pi/logs"
-r = "actual_" + time.strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
-full_r = os.path.join(DIR,r)
+#DIR = "/home/pi/logs"
+#r = "actual_" + time.strftime("%Y-%m-%d_%H.%M.%S") + ".txt"
+#full_r = os.path.join(DIR,r)
 
 #Global TLV IDs
 tlv_id_table = []
