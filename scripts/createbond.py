@@ -26,6 +26,7 @@ def create_bond(device_address=None, adapter_address=None):
         no_bond = True
     else:
         print("bond already exists for %s" % (device_address.upper()))
+        print("successfully quiting bluetoothctl since bond is already formed")
         con.sendline("quit") 
         return(0)   
     
@@ -97,6 +98,7 @@ def create_bond(device_address=None, adapter_address=None):
                 con.sendline("quit")
                 return(1)
             else:
+                print("successfully quiting bluetoothctl after forming bond")
                 con.sendline("quit")
                 return(0)
     except(pexpect.TIMEOUT):
