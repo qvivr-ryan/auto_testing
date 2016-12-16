@@ -125,6 +125,16 @@ try:
     else:
         print("set_card_order cmd failed\r\n")
 
+    raw_input("\npress enter to send cmd: 'delete_card' \n")
+    #global add_card_payload_1
+    delete_card_payload_1 = bytearray.fromhex("006700 10343432 37343334 30323932 3030 303031")
+    ble_cmd_transmit(globals.device, 'delete_card', delete_card_payload_1)
+    time.sleep(5)
+    if True == ble_cmd_response_status_check(globals.device):
+        print("delete_card cmd successful\r\n")
+    else:
+        print("delete_card cmd failed\r\n")
+        
     raw_input("\npress enter to send cmd: 'get_log_data' \n")
     ble_cmd_transmit(globals.device, 'get_log_data', bytearray([]))
     #print("time before sleep %s\r\n" % time.ctime())
